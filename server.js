@@ -49,22 +49,26 @@ app.get("/", (req, res) => {
 });
 
 app.post("/signin", (req, res) => {
+  db.select("email", "hash")
+    .from("login")
+    .where("email", "=", req.body.email)
+    .then(data => {
+      const isValid = bcrypt.compareSync(req.body.password, data[0].hash);
+      if (isValid) {
+        return db
+          .select("*")
+          .from("users")
+          .where("email", "=", req.body.email)
+          .then(user => {
+            res.json(user[0]);
+          })
+          .catch(err => res.status(400).json("unable to get user"));
+      } else {
+        res.status(400).json("wrong email or password");
+      }
+    })
+    .catch(err => res.status(400).json("wrong email or password"));
   /*
-  bcrypt.compare(
-    "apples",
-    "$2a$10$4qchaqouvVaDOKtCbU6dAurRLbhEcvWBzvX7cQv7QeqR6JCrQJ0bK",
-    (err, res) => {
-      console.log("first guess", res);
-    }
-  );
-  bcrypt.compare(
-    "veggies",
-    "$2a$10$4qchaqouvVaDOKtCbU6dAurRLbhEcvWBzvX7cQv7QeqR6JCrQJ0bK",
-    (err, res) => {
-      console.log("second guess", res);
-    }
-  );
-  */
   if (
     req.body.email === database.users[0].email &&
     req.body.password === database.users[0].password
@@ -74,27 +78,35 @@ app.post("/signin", (req, res) => {
   } else {
     res.status(404).json("error signing in");
   }
+  */
 });
 
 app.post("/register", (req, res) => {
   const { name, email, password } = req.body;
-  db("users")
-    .returning("*")
-    .insert({
-      email: email,
-      name: name,
-      joined: new Date()
-    })
-    .then(user => {
-      res.json(user[0]);
-    })
-    .catch(err => res.status(400).json("user already exists"));
-  /*
-  bcrypt.hash(password, null, null, function(err, hash) {
-    // store hash in password database
-    console.log(hash);
-  });
-*/
+  const hash = bcrypt.hashSync(password);
+  db.transaction(trx => {
+    trx
+      .insert({
+        hash: hash,
+        email: email
+      })
+      .into("login")
+      .returning("email")
+      .then(loginEmail => {
+        return trx("users")
+          .returning("*")
+          .insert({
+            email: loginEmail[0],
+            name: name,
+            joined: new Date()
+          })
+          .then(user => {
+            res.json(user[0]);
+          });
+      })
+      .then(trx.commit)
+      .catch(trx.rollback);
+  }).catch(err => res.status(400).json("user already exists"));
 });
 
 app.get("/profile/:id", (req, res) => {
