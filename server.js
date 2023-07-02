@@ -18,7 +18,9 @@ const db = knex({
 });
 
 const app = express();
+
 app.use(cors());
+
 app.use(bodyParser.json());
 
 app.get("/", (req, res) => {
@@ -40,9 +42,12 @@ app.put("/image", (req, res) => {
 });
 
 app.post("/imageurl", (req, res) => {
+  console.log("here");
   image.handleApiCall(req, res);
 });
 
-app.listen(process.env.PORT || 3030, () => {
-  console.log(`app is running from port ${process.env.PORT}`);
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`app is running from port ${PORT}`);
 });
