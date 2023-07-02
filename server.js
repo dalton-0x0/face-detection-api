@@ -42,7 +42,6 @@ app.put("/image", (req, res) => {
 });
 
 app.post("/imageurl", (req, res) => {
-  console.log("here");
   image.handleApiCall(req, res);
 });
 
